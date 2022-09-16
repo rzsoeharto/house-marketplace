@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-toastify";
 import googleIcon from "../assets/svg/googleIcon.svg";
 import { db } from "../firebase.config";
@@ -24,10 +24,14 @@ function OAuth() {
           doc(db, "users", user.uid, {
             name: user.displayName,
             email: user.email,
+            timestamp: serverTimestamp(),
           })
         );
       }
-    } catch (error) {}
+      navigate("/");
+    } catch (error) {
+      toast.error("Could not authorize with Google");
+    }
   };
   return (
     <div className="socialLogin">
