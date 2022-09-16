@@ -1,17 +1,16 @@
+import { useState, useEffect, useRef } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import {
   getStorage,
   ref,
-  uploadBytes,
   getDownloadURL,
   uploadBytesResumable,
 } from "firebase/storage";
 import { db } from "../firebase.config";
-import { v4 as uuidv4 } from "uuid";
 import React from "react";
-import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { v4 as uuidv4 } from "uuid";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 function CreateListing() {
@@ -32,6 +31,7 @@ function CreateListing() {
     latitude: 0,
     longitude: 0,
   });
+
   const {
     type,
     name,
@@ -98,8 +98,9 @@ function CreateListing() {
         `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=AIzaSyBbgs8DKJr5dw58SIP3En_mbRnn6KOzJSA`
       );
       const data = await response.json();
+
       geolocation.lat = data.results[0]?.geometry.location.lat ?? 0;
-      geolocation.lang = data.results[0]?.geometry.location.lang ?? 0;
+      geolocation.lng = data.results[0]?.geometry.location.lng ?? 0;
 
       location =
         data.status === "ZERO_RESULTS"
@@ -108,15 +109,15 @@ function CreateListing() {
 
       if (location === undefined || location.includes("undefined")) {
         setLoading(false);
-        toast.error("Please enter a valid address");
+        toast.error("Please enter a correct address");
         return;
       }
     } else {
       geolocation.lat = latitude;
-      geolocation.lang = longitude;
+      geolocation.lng = longitude;
     }
 
-    // store img
+    // Store image in firebase
     const storeImage = async (image) => {
       return new Promise((resolve, reject) => {
         const storage = getStorage();
@@ -157,7 +158,7 @@ function CreateListing() {
       });
     };
 
-    const imgUrls = await Promise.all(
+    const imageUrls = await Promise.all(
       [...images].map((image) => storeImage(image))
     ).catch(() => {
       setLoading(false);
@@ -167,29 +168,22 @@ function CreateListing() {
 
     const formDataCopy = {
       ...formData,
-      imgUrls,
+      imageUrls,
       geolocation,
-      timeStamp: serverTimestamp(),
+      timestamp: serverTimestamp(),
     };
 
+    formDataCopy.location = address;
     delete formDataCopy.images;
     delete formDataCopy.address;
-
-    // if location exist then fdc = location
-    location && (formDataCopy.location = location);
-
-    // if formdatacopy doesnt exist, then delete dis price
     !formDataCopy.offer && delete formDataCopy.discountedPrice;
 
     const docRef = await addDoc(collection(db, "listings"), formDataCopy);
     setLoading(false);
-    toast.success("Listing Saved");
+    toast.success("Listing saved");
     navigate(`/category/${formDataCopy.type}/${docRef.id}`);
   };
 
-  //
-  //
-  //
   const onMutate = (e) => {
     let boolean = null;
 
@@ -208,6 +202,7 @@ function CreateListing() {
       }));
     }
 
+    // Text/Booleans/Numbers
     if (!e.target.files) {
       setFormData((prevState) => ({
         ...prevState,
@@ -215,14 +210,20 @@ function CreateListing() {
       }));
     }
   };
+
+  if (loading) {
+    return <h1>Loading...</h1>;
+  }
+
   return (
     <div className="profile">
       <header>
         <p className="pageHeader">Create a Listing</p>
       </header>
+
       <main>
         <form onSubmit={onSubmit}>
-          <label className="formLabel"> Sell / Rent</label>
+          <label className="formLabel">Sell / Rent</label>
           <div className="formButtons">
             <button
               type="button"
@@ -243,10 +244,11 @@ function CreateListing() {
               Rent
             </button>
           </div>
+
           <label className="formLabel">Name</label>
           <input
-            type="text"
             className="formInputName"
+            type="text"
             id="name"
             value={name}
             onChange={onMutate}
@@ -254,6 +256,7 @@ function CreateListing() {
             minLength="10"
             required
           />
+
           <div className="formRooms flex">
             <div>
               <label className="formLabel">Bedrooms</label>
@@ -282,7 +285,8 @@ function CreateListing() {
               />
             </div>
           </div>
-          <label className="formLabel">Parking Spot</label>
+
+          <label className="formLabel">Parking spot</label>
           <div className="formButtons">
             <button
               className={parking ? "formButtonActive" : "formButton"}
@@ -303,12 +307,11 @@ function CreateListing() {
               id="parking"
               value={false}
               onClick={onMutate}
-              min="1"
-              max="50"
             >
               No
             </button>
           </div>
+
           <label className="formLabel">Furnished</label>
           <div className="formButtons">
             <button
@@ -334,6 +337,7 @@ function CreateListing() {
               No
             </button>
           </div>
+
           <label className="formLabel">Address</label>
           <textarea
             className="formInputAddress"
@@ -342,7 +346,8 @@ function CreateListing() {
             value={address}
             onChange={onMutate}
             required
-          ></textarea>
+          />
+
           {!geolocationEnabled && (
             <div className="formLatLng flex">
               <div>
@@ -408,6 +413,7 @@ function CreateListing() {
             />
             {type === "rent" && <p className="formPriceText">$ / Month</p>}
           </div>
+
           {offer && (
             <>
               <label className="formLabel">Discounted Price</label>
@@ -423,6 +429,7 @@ function CreateListing() {
               />
             </>
           )}
+
           <label className="formLabel">Images</label>
           <p className="imagesInfo">
             The first image will be the cover (max 6).
@@ -445,5 +452,4 @@ function CreateListing() {
     </div>
   );
 }
-
 export default CreateListing;

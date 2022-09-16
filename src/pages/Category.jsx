@@ -22,10 +22,10 @@ function Category() {
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        //Get reference
+        // Get reference
         const listingsRef = collection(db, "listings");
 
-        // query
+        // Create a query
         const q = query(
           listingsRef,
           where("type", "==", params.categoryName),
@@ -33,6 +33,7 @@ function Category() {
           limit(10)
         );
 
+        // Execute query
         const querySnap = await getDocs(q);
         const listings = [];
 
@@ -42,12 +43,14 @@ function Category() {
             data: doc.data(),
           });
         });
+
         setListings(listings);
         setLoading(false);
       } catch (error) {
         toast.error("Could not fetch listings");
       }
     };
+
     fetchListings();
   }, [params.categoryName]);
 
